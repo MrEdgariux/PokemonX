@@ -1,5 +1,99 @@
 import sqlite3, pymysql
 from config import *
+from flask_socketio import emit
+
+# ----- [ Classes ] ----- #
+
+class ChatCommandHandler:
+    def __init__(self, user_id):
+        self.user_id = user_id
+        self.commands = {
+            '/help': self.help,
+            '/start': self.start,
+            '/message': self.message,
+            '/ban': self.banUser,
+            '/clearchat': self.clearMessages,
+            # Add more commands here
+        }
+
+    def handle_command(self, command, args):
+        if command in self.commands:
+            # Call the corresponding function
+            data = {}
+            data['message'] = self.commands[command](args)
+            data['is_system'] = True
+            data['username'] = get_user_by_id(self.user_id)[1]
+            return data
+
+        else:
+            data = {}
+            data['message'] = f'Unknown command: {command}'
+            data['is_system'] = True
+            data['username'] = get_user_by_id(self.user_id)[1]
+            return data
+
+    def help(self, args):
+        if get_user_by_id(self.user_id)[5] != 'admin':
+            message = """ Commands: <br>
+            <ul>
+            <li>/help - Show this help message
+            <li>/start - Start command
+            </ul>
+            """
+            return message
+        else:
+            message = """ Commands:
+
+            /help - Show this help message
+            /start - Start command
+            /message <message> - Send a message to all users
+            """
+            return message
+        
+    def start(self, args):
+        return "This is default system message"
+
+    def banUser(self, args):
+        if get_user_by_id(self.user_id)[5] != 'admin':
+            message = "You don't have permission to use this command"
+            return message
+        if len(args) < 2:
+            message = "Invalid arguments. Usage: /ban <user_id> <reason>"
+            return message
+        user_id = args[0]
+        reason = ' '.join(args[1:])
+        user = get_user_by_id(user_id)
+        if user is None:
+            message = "User not found"
+            return message
+        if user[5] == 'admin':
+            message = "You can't ban admin"
+            return message
+        
+        return "User banned"
+        
+
+    def message(self, args):
+        if get_user_by_id(self.user_id)[5] != 'admin':
+            message = "You don't have permission to use this command"
+            return message
+        if len(args) < 1:
+            message = "Invalid arguments. Usage: /message <message>"
+            return message
+        message = ' '.join(args)
+        return message
+    
+    def clearMessages(self, args):
+        if get_user_by_id(self.user_id)[5] != 'admin':
+            message = "You don't have permission to use this command"
+            return message
+        conn = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+        cursor = conn.cursor()
+        cursor.execute('''DELETE FROM chat_messages''')
+        conn.commit()
+        emit('refresh', broadcast=True)
+        message = "Messages cleared"
+        return message
 
 # ----- [ Validation Functions ] ----- #
 
@@ -129,6 +223,18 @@ def validate_tables():
             FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
         )
     ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS chat_messages(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            message TEXT NOT NULL,
+            is_command TEXT NOT NULL,
+            message_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    ''')
+
     db.commit()
     db.close()
 
@@ -399,6 +505,42 @@ def get_user_pokemons(user_id):
     pokemons = cursor.fetchall()
     db.close()
     return pokemons
+
+# ----- [ Chat Functions ] ----- #
+
+def get_chat_messages():
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    cursor.execute('''
+        SELECT chat_messages.*, users.username FROM chat_messages
+        INNER JOIN users ON chat_messages.user_id=users.id
+        ORDER BY chat_messages.id ASC
+        LIMIT 50
+    ''')
+    messages = cursor.fetchall()
+    db.close()
+    return messages
+
+def add_chat_message(user_id, message):
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    is_cmd = False
+    if message.startswith('/'):
+        is_cmd = True
+    cursor.execute('''INSERT INTO chat_messages(user_id, message, is_command) VALUES(?, ?, ?)''', (user_id, message, is_cmd))
+    db.commit()
+    db.close()
+    return True
+
+def chat_handle_commands(message, user_id):
+    if message.startswith('/'):
+        message = message.split(' ')
+        command = message[0]
+        args = message[1:]
+        data = ChatCommandHandler(user_id).handle_command(command, args)
+        if data is not None:
+            return data
+    return None
 
 # ----- [ Store Functions ] ----- #
 

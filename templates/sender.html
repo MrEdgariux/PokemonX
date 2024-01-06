@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js" integrity="sha384-mZLF4UVrpi/QTWPA7BjNPEnkIfRFn4ZEO3Qt/HFklTJBj/gBOV8G3HcKn4NfQblz" crossorigin="anonymous"></script>
+    <title>Chat</title>
+    <style>
+        ::selection {
+            background-color: #fbff00;
+            color: #000000;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1d1c1c;
+            margin: 0;
+            padding: 0;
+            background-image: url("https://i.ibb.co/KjbVmkx/background.jpg");
+            background-repeat: no-repeat;
+            background-size: cover;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .buttons button {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 250px;
+            height: 50px;
+            font-size: 20px;
+            margin: 0 10px;
+            padding: 10px 20px;
+            background-color: #ffffff81;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #000000;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .buttons a:hover {
+            background-color: #fbff00;
+        }
+        .buttons button:hover {
+            background-color: #fbff00;
+        }
+
+        .center{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.8);
+            border-radius: 12px;
+            border: 2px solid #ffffff;
+        }
+
+        .chatArea {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            color: #ffffff;
+            font-family: 'Courier New', Courier, monospace;
+            text-align: center;
+        }
+
+        textarea {
+            padding: 10px;
+            border-radius: 6px;
+            max-width: 780px;
+            max-height: 100px;
+            min-width: 100px;
+            min-height: 25px;
+            background-color: #ffae0077;
+            color: white;
+            font-family: 'Courier New', Courier, monospace;
+            text-align: center;
+        }
+
+        .all-chat {
+            height: 400px;
+            margin-bottom: 10px;
+            border: 2px solid #ffd900;
+            border-radius: 6px;
+            padding: 10px;
+            overflow-y: scroll;
+        }
+
+        .messages {
+            display: flex;
+            flex-direction: column;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        
+        h1 {
+            color: #ffffff;
+            text-align: center;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        
+        p {
+            color: #bbbbbb;
+            line-height: 1.5;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .SystemMessage {
+            color: #ff0a16;
+            font-style: italic;
+        }
+
+        .SystemPrefix {
+            color: #ff0a16;
+            font-style: normal;
+            font-weight: bold;
+        }
+
+        .DefaultMessage {
+            color: #ffffff;
+        }
+
+        .alert {
+            padding: 10px;
+            background-color: #f44336;
+            color: white;
+            margin-bottom: 15px;
+            border-radius: 6px;
+        }
+    </style>
+    <script>
+        var socket = io();
+
+        function sendMessage() {
+            var message = document.getElementById('message').value;
+            socket.emit('send_message', {message: message});
+            document.getElementById('message').value = '';
+        }
+
+        socket.on('redirect', function(data) {
+            location.href = data.url;
+        });
+
+        socket.on('user_joined', function(username) {
+            var messageContainer = document.getElementById('messages');
+            messageContainer.innerHTML += '<li class="SystemMessage"><span class="SystemPrefix">[SYSTEM]</span> ' + username + ' has joined the chat!</li>';
+        });
+
+        socket.on('user_left', function(username) {
+            var messageContainer = document.getElementById('messages');
+            messageContainer.innerHTML += '<li class="SystemMessage"><span class="SystemPrefix">[SYSTEM]</span> ' + username + ' has left the chat!</li>';
+        });
+
+        socket.on('refresh', function() {
+            location.reload();
+        });
+
+        socket.on('chat', function(data) {
+            var messageContainer = document.getElementById('messages');
+            if (data.is_system){
+                messageContainer.innerHTML += '<li class="SystemMessage"><span class="SystemPrefix">[SYSTEM]</span> ' + data.message + '</li>';
+                return;
+            } else {
+                messageContainer.innerHTML += '<div class="DefaultMessage"><b>' + data.username + ': </b>' + data.message + '</div>';
+            }
+        });
+    </script>
+</head>
+<body>
+    <noscript>
+        <h1>JavaScript is required to run this application.</h1>
+    </noscript>
+
+    <div class="center">
+        <div class="container">
+            <h1>Chat with other PokeUsers!</h1>
+            <div class="chatArea">
+                {% if error %}
+                    <div class="alert">{{ error }}</div>
+                {% endif %}
+                <div class="all-chat">
+                    <div id="messages"></div>
+                </div>
+                <textarea name="message" id="message" placeholder="Chat here" cols="60" rows="1"></textarea>
+            </div>
+        </div>
+    </div>
+</body>
+<script>
+    document.getElementById('message').addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            sendMessage();
+        }
+    });
+</script>
+</html>

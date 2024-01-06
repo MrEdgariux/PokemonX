@@ -1,14 +1,20 @@
-import sqlite3, time
+import sqlite3, time, signal
 from datetime import datetime
 from functions import *
 from config import *
-from flask import g, request
-from flask import render_template
-from flask import Flask
-from flask import redirect, url_for
-from flask import session
+from flask import g, request, render_template, Flask, redirect, url_for, session
+from flask_socketio import SocketIO, send, emit
+
+def signal_handler(sig, frame):
+    print('You pressed Ctrl+C!')
+    exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
 
 app = Flask(__name__)
+socketio = SocketIO(app)
+
+
 
 # Set the secret key to some random bytes. Keep this really secret!
 app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'
@@ -71,6 +77,71 @@ def log_request(response):
 
     return response
 
+@socketio.on('connect')
+def handle_connection():
+    if is_user_logged_in():
+        print(f"Client connected: {get_user_session()}")
+        emit('user_joined', get_user_session(), broadcast=True)
+        load_messages()
+    else:
+        print("Not logged in user connected")
+        emit('redirect', {'url': url_for('login')} )
+
+@socketio.on('disconnect')
+def handle_disconnection():
+    if is_user_logged_in():
+        print(f"Client disconnected: {get_user_session()}")
+        emit('user_left', get_user_session(), broadcast=True)
+
+@socketio.on('user_joined')
+def handle_user_joined(username):
+    print(f"User {username} joined")
+    data = {}
+    data['message'] = f"{username} joined the chat"
+    data['is_system'] = True
+    emit('chat', data, broadcast=True)
+
+@socketio.on('user_left')
+def handle_user_joined(username):
+    print(f"User {username} left")
+    data = {}
+    data['message'] = f"{username} left the chat"
+    data['is_system'] = True
+    emit('chat', data, broadcast=True)
+
+@socketio.on('send_message')
+def handle_send_message(data):
+    add_chat_message(get_user_id(), data['message'])
+    if data['message'].startswith('/'):
+        print(f"Command received: {data['message']} by {get_user_session()}")
+        data_served = chat_handle_commands(data['message'], get_user_id())
+        if data_served is None:
+            print("Command not found, or error occurred")
+            return
+        emit('chat', data_served, broadcast=False)
+        return
+    print(f"Message received: {data['message']} by {get_user_session()}")
+    data['is_system'] = False
+    data['username'] = get_user_session()
+    emit('chat', data, broadcast=True)
+
+def test_system_message():
+    data = {}
+    data['message'] = "System message"
+    data['is_system'] = True
+    emit('chat', data, broadcast=True)
+
+def load_messages():
+    messages = get_chat_messages()
+    for message in messages:
+        if message[2].startswith('/'):
+            continue
+        data = {}
+        data['message'] = message[2]
+        data['is_system'] = False
+        data['username'] = get_user_by_id(message[1])[1]
+        emit('chat', data, broadcast=False)
+
 # Define a route for accessing the data
 @app.route('/', methods=['GET'])
 def home():
@@ -79,6 +150,10 @@ def home():
 @app.route('/about', methods=['GET'])
 def about():
     return render_template('about.html')
+
+@app.route('/test/send', methods=['GET'])
+def tsend():
+    return render_template('sender.html')
 
 @app.route('/contact', methods=['GET'])
 def contact():
@@ -446,7 +521,8 @@ def adminCreateUser():
     return render_template('users/create.html')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    socketio.run(app, debug=True)
+
 
 # https://i.ibb.co/2SgpHyb/mredgariux-pokemon-group-v-5-2-54c368c8-1ae3-43a6-994c-22a3d60b7f00-0.png
 # https://i.ibb.co/VthjvKL/mredgariux-pokemon-group-v-5-2-54c368c8-1ae3-43a6-994c-22a3d60b7f00-1.png

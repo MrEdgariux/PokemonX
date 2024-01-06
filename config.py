@@ -1,5 +1,5 @@
 
-version = '1.4.2'
+version = '1.5'
 gems_price = 100
 version_db = version.replace('.', '_')
 dsa = "SQLite" # "SQLite" or "MySQL"
@@ -9,3 +9,7 @@ mysql_connection = {
         'password': '',
         'database': 'db',
 }
+
+# ----- [ MESSAGES ] ----- #
+
+max_load_messages = 50
