@@ -53,12 +53,19 @@ def log_request(response):
     cursor = db.cursor()
     visit_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     page_name = request.path  # get the full path of the request
+    refer = request.referrer  # get the referer (if any)
     method = request.method  # get the request method (GET, POST, etc.)
     status_code = response.status_code  # get the response status code (200, 201, 404, etc.)
+    if is_user_logged_in():
+        user_id = get_user_id()
+        cursor.execute('''
+            INSERT INTO user_activities(user_id, page_uri, visit_time, method, status_code)
+            VALUES(?, ?, ?, ?, ?)
+        ''', (user_id, page_name, visit_time, method, status_code))
     cursor.execute('''
-        INSERT INTO page_visits(page_name, visit_time, method, status_code)
-        VALUES(?, ?, ?, ?)
-    ''', (page_name, visit_time, method, status_code))
+        INSERT INTO page_visits(page_name, visit_time, method, status_code, ref)
+        VALUES(?, ?, ?, ?, ?)
+    ''', (page_name, visit_time, method, status_code, refer))
     db.commit()
     db.close()
 

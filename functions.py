@@ -17,34 +17,46 @@ def validate_tables():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS pokemons(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            type TEXT NOT NULL,
             name TEXT NOT NULL,
             price_money INTEGER NOT NULL,
             price_gems INTEGER NOT NULL,
-                   
-            pokemon_health INTEGER NOT NULL DEFAULT 100,
-            pokemon_attack INTEGER NOT NULL DEFAULT 10,
-            pokemon_defense INTEGER NOT NULL DEFAULT 10,
-            pokemon_speed INTEGER NOT NULL DEFAULT 10,
-            pokemon_type TEXT NOT NULL,
-            pokemon_special_attack INTEGER NOT NULL,
-            pokemon_special_defense INTEGER NOT NULL DEFAULT 10,
-                   
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(pokemon_special_attack) REFERENCES pokemon_special_attacks(id),
             UNIQUE(name)
         )
     ''')
+    # cursor.execute('''
+    #     CREATE TABLE IF NOT EXISTS pokemons(
+    #         id INTEGER PRIMARY KEY AUTOINCREMENT,
+    #         type TEXT NOT NULL,
+    #         name TEXT NOT NULL,
+    #         price_money INTEGER NOT NULL,
+    #         price_gems INTEGER NOT NULL,
+                   
+    #         pokemon_health INTEGER NOT NULL DEFAULT 100,
+    #         pokemon_attack INTEGER NOT NULL DEFAULT 10,
+    #         pokemon_defense INTEGER NOT NULL DEFAULT 10,
+    #         pokemon_speed INTEGER NOT NULL DEFAULT 10,
+    #         pokemon_type TEXT NOT NULL,
+    #         pokemon_special_attack INTEGER NOT NULL,
+    #         pokemon_special_defense INTEGER NOT NULL DEFAULT 10,
+                   
+    #         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    #         FOREIGN KEY(pokemon_special_attack) REFERENCES pokemon_special_attacks(id),
+    #         UNIQUE(name)
+    #     )
+    # ''')
 
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS pokemon_special_attacks(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            attack_power INTEGER NOT NULL,
-            attack_type TEXT NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(name)
-        )
-    ''')
+    # cursor.execute('''
+    #     CREATE TABLE IF NOT EXISTS pokemon_special_attacks(
+    #         id INTEGER PRIMARY KEY AUTOINCREMENT,
+    #         name TEXT NOT NULL,
+    #         attack_power INTEGER NOT NULL,
+    #         attack_type TEXT NOT NULL,
+    #         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    #         UNIQUE(name)
+    #     )
+    # ''')
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS user_favourite_pokemons(
@@ -57,18 +69,18 @@ def validate_tables():
         )
     ''')
 
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS battles(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            pokemon_id INTEGER NOT NULL,
-            pokemon_level INTEGER NOT NULL,
-            pokemon_experience INTEGER NOT NULL,
-            battle_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
-            FOREIGN KEY(pokemon_id) REFERENCES pokemons(id) ON DELETE CASCADE
-        )
-    ''')
+    # cursor.execute('''
+    #     CREATE TABLE IF NOT EXISTS battles(
+    #         id INTEGER PRIMARY KEY AUTOINCREMENT,
+    #         user_id INTEGER NOT NULL,
+    #         pokemon_id INTEGER NOT NULL,
+    #         pokemon_level INTEGER NOT NULL,
+    #         pokemon_experience INTEGER NOT NULL,
+    #         battle_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    #         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+    #         FOREIGN KEY(pokemon_id) REFERENCES pokemons(id) ON DELETE CASCADE
+    #     )
+    # ''')
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users(
@@ -99,6 +111,7 @@ def validate_tables():
         CREATE TABLE IF NOT EXISTS page_visits(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             page_name TEXT NOT NULL,
+            ref TEXT,
             visit_time TEXT NOT NULL,
             method TEXT NOT NULL,
             status_code INTEGER NOT NULL
