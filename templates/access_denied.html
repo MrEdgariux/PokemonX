@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>User Profile</title>
+    <style>
+        ::selection {
+            background-color: #fbff00;
+            color: #000000;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1d1c1c;
+            margin: 0;
+            padding: 0;
+            background-image: url("https://static.vecteezy.com/system/resources/previews/024/625/582/non_2x/cute-yellow-mouse-character-background-free-vector.jpg");
+            background-repeat: no-repeat;
+            background-size: cover;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .buttons a {
+            display: inline-block;
+            margin: 0 10px;
+            padding: 10px 20px;
+            background-color: #ffffff81;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #000000;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .buttons a:hover {
+            background-color: #fbff00;
+        }
+
+        .center{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.8);
+            border-radius: 12px;
+            box-shadow: 0 5px 5px rgb(0, 0, 0);
+        }
+        
+        h1 {
+            color: #ffffff;
+            text-align: center;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        
+        p {
+            color: #bbbbbb;
+            line-height: 1.5;
+            font-family: 'Courier New', Courier, monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="center">
+        <div class="container">
+            <h1>You don't have access to this page</h1>
+            <p>Sorry {{username}}.</p>
+            <p>Your role is too low to be able to access this page</p>
+            <div class="buttons">
+                <a href="/">Home</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

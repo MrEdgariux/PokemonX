@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Creating An Pokemon Page</title>
+    <style>
+        ::selection {
+            background-color: #fbff00;
+            color: #000000;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1d1c1c;
+            margin: 0;
+            padding: 0;
+            background-image: url("https://static.vecteezy.com/system/resources/previews/024/625/582/non_2x/cute-yellow-mouse-character-background-free-vector.jpg");
+            background-repeat: no-repeat;
+            background-size: cover;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding-top: 10px;
+        }
+
+        .buttons a {
+            display: inline-block;
+            margin: 0 10px;
+            padding: 10px 20px;
+            background-color: #ffffff81;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #000000;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .buttons button {
+            display: inline-block;
+            margin: 0 10px;
+            padding: 10px 20px;
+            background-color: #ffffff81;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #000000;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .buttons a:hover {
+            background-color: #fbff00;
+        }
+        .buttons button:hover {
+            background-color: #fbff00;
+        }
+
+        .veiksmai {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .center{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.8);
+            border-radius: 12px;
+            border: 2px solid #ffffff;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            color: #ffffff;
+            font-family: 'Courier New', Courier, monospace;
+            text-align: center;
+        }
+
+        input {
+            padding: 10px;
+            border-radius: 6px;
+            background-color: #ffae0077;
+        }
+
+        select {
+            padding: 10px;
+            border-radius: 6px;
+            background-color: #ffae0077;
+        }
+        
+        h1 {
+            color: #ffffff;
+            text-align: center;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        
+        p {
+            color: #bbbbbb;
+            line-height: 1.5;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #ffae0077;
+            border-radius: 6px;
+            color: #ffffff;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .alert {
+            padding: 10px;
+            color: white;
+            margin-bottom: 15px;
+            border-radius: 6px;
+        }
+
+        .danger {
+            background-color: #ff1100;
+            color: white;
+        }
+        .success {
+            background-color: #00ff08;
+        }
+    </style>
+</head>
+<body>
+    <div class="center">
+        <div class="container">
+            <h1>Pokemons</h1>
+            <ul>
+                {% if pokemons|length == 0 %}
+                <div class="alert danger">
+                    {% if is_admin %}
+                        No pokemons found
+                    {% else %}
+                        You don't have any pokemons yet
+                    {% endif %}
+                </div>
+                {% else %}
+                    {% if is_admin %}
+                    {% if error %}
+                        <div class="alert danger">
+                            {{ error }}
+                        </div>
+                    {% elif success %}
+                        <div class="alert success">
+                            {{ success }}
+                        </div>
+                    {% endif %}
+                        {% for pokemon in pokemons %}
+                            <li>
+                                {{ pokemon[1] }}
+                                <div class="buttons veiksmai">
+                                    <button type="button" id="modify" data-pokemonId="{{ pokemon[0] }}">Modify</button>
+                                    <button type="button" id="delete" data-pokemonId="{{ pokemon[0] }}">Delete</button>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    {% else %}
+                        {% for pokemon in pokemons %}
+                            <li>
+                                {{ pokemon[7] }}
+                            </li>
+                        {% endfor %}
+                    {% endif %}
+                {% endif %}
+            </ul>
+            <div class="buttons veiksmai">
+                <a onclick="history.back()" style="cursor:pointer;">Back to menu</a>
+            </div>
+        </div>
+    </div>
+</body>
+{% if is_admin %}
+<script>
+    const modifyButtons = document.querySelectorAll("#modify");
+    const deleteButtons = document.querySelectorAll("#delete");
+
+    modifyButtons.forEach(button => {
+        button.addEventListener("click", () => {
+            window.location.href = `/admin/modify-pokemon/${button.dataset.pokemonid}`;
+        });
+    });
+
+    deleteButtons.forEach(button => {
+        button.addEventListener("click", () => {
+            if (confirm("Are you sure you want to delete this pokemon?")) {
+                window.location.href = `/admin/delete-pokemon/${button.dataset.pokemonid}`;
+            }
+        });
+    });
+</script>
+{% endif %}
+</html>

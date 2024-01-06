@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PokemonX</title>
+    <style>
+        ::selection {
+            background-color: #fbff00;
+            color: #000000;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1d1c1c;
+            margin: 0;
+            padding: 0;
+            background-image: url("https://i.ibb.co/KjbVmkx/background.jpg");
+            background-repeat: no-repeat;
+            background-size: cover;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding-top: 10px;
+        }
+
+        .buttons a {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 250px;  /* Set the width of the buttons */
+            height: 25px;  /* Set the height of the buttons */
+            margin: 0 10px;
+            padding: 10px 20px;
+            background-color: #ffffff81;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #000000;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .buttons a:hover {
+            background-color: #fbff00;
+        }
+
+        .center{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.8);
+            border-radius: 12px;
+            border: 2px solid #ffffff;
+        }
+        
+        h1 {
+            color: #ffffff;
+            text-align: center;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        
+        p {
+            color: #bbbbbb;
+            line-height: 1.5;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .xd {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="center">
+        <div class="container">
+            <h1>Welcome to the <span id="magicBtn" class="xd">PokemonX</span></h1>
+            <p>This website was built by MrEdgariux, with a help of Artificial Intelligence.</p>
+            <p>Website might not be stable due bugs and etc in our project.</p>
+            <p>Website has some functions in place, you can try to play within.</p>
+            <div class="buttons">
+                <a href="about">About us</a>
+                <a href="updates">Updates</a>
+                <a href="contact">Contact us</a>
+            </div>
+            <div class="buttons">
+                {% if user %}
+                    <a href="user">User</a>
+                    <a href="store">Store</a>
+                    <a href="user/logout">Logout</a>
+                {% else %}
+                    <a href="user/register">Register</a>
+                    <a href="user/login">Login</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+<head>
+    <script>
+        const magicBtn = document.getElementById('magicBtn');
+        const colors = ['#fbff00', '#ff00fb', '#00fbff', '#00fffb', '#fffb00', '#fb00ff', '#ffffff', '#000000', '#ff0000', '#00ff00', '#0000ff', '#ffff00', '#00ffff', '#ff00ff', '#ffffff', '#000000'];
+        magicBtn.addEventListener('click', () => {
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            magicBtn.style.color = randomColor;
+        });
+    </script>
+</head>
+</html>

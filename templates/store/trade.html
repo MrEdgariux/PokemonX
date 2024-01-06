@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pokemon Store</title>
+    <style>
+        ::selection {
+            background-color: #fbff00;
+            color: #000000;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1d1c1c;
+            margin: 0;
+            padding: 0;
+            background-image: url("https://static.vecteezy.com/system/resources/previews/024/625/582/non_2x/cute-yellow-mouse-character-background-free-vector.jpg");
+            background-repeat: no-repeat;
+            background-size: cover;
+            color: white;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding-top: 10px;
+        }
+
+        .buttons a {
+            display: inline-block;
+            margin: 0 10px;
+            padding: 10px 20px;
+            background-color: #ffffff81;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #000000;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .buttons button {
+            display: inline-block;
+            margin: 0 10px;
+            padding: 10px 20px;
+            background-color: #ffffff81;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #000000;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .buttons a:hover {
+            background-color: #fbff00;
+        }
+        .buttons button:hover {
+            background-color: #fbff00;
+        }
+
+        .veiksmai {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .center{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.8);
+            border-radius: 12px;
+            border: 2px solid #ffffff;
+        }
+        
+        .container_shop {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* Create three equal-width columns */
+            grid-gap: 20px; /* Add some spacing between the cards */
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .card {
+            padding: 20px;
+            background-color: #ffae0077;
+            border-radius: 6px;
+            color: #ffffff;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .card h2 {
+            text-align: center;
+        }
+
+        .card p {
+            color: #bbbbbb;
+            line-height: 1.5;
+        }
+
+        .alert {
+            padding: 10px;
+            color: white;
+            margin-bottom: 15px;
+            border-radius: 6px;
+        }
+
+        .danger {
+            background-color: #ff1100;
+            color: white;
+        }
+        .success {
+            background-color: #00ff08;
+        }
+    </style>
+</head>
+<body>
+    <div class="center">
+        <div class="container">
+            {% if error %}
+                <div class="alert danger">
+                    {{ error }}
+                </div>
+            {% elif success %}
+                <div class="alert success">
+                    {{ success }}
+                </div>
+            {% endif %}
+
+            <h1>Select which of pokemons you going to trade for {{ selectedPokemon[1] }}</h1>
+
+            {% if pokemons|length == 0 %}
+            <div class="alert danger">
+                No pokemons found
+            </div>
+            {% else %}
+                <div class="container_shop">
+                {% for pokemon in pokemons %}
+                    <div class="card">
+                        <h2>{{ pokemon[1] }}</h2>
+                        <p>
+                            Price $: {{ pokemon[3] }}<br>
+                            Price GEMS: {{ pokemon[4] }}<br>
+                        </p>
+                    </div>
+                {% endfor %}
+                </div>
+            {% endif %}
+            <div class="buttons veiksmai">
+                <a onclick="history.back()" style="cursor:pointer;">Back to menu</a>
+            </div>
+        </div>
+    </div>
+</body>
+<script>
+    const buyButtons = document.querySelectorAll("#buy");
+    const tradeButtons = document.querySelectorAll("#trade");
+
+    buyButtons.forEach(button => {
+        button.addEventListener("click", () => {
+            pokemonId = button.dataset.pokemonid;
+            window.location.href = `/store/buy/${pokemonId}`;
+        });
+    });
+
+    tradeButtons.forEach(button => {
+        button.addEventListener("click", () => {
+            pokemonId = button.dataset.pokemonid;
+            window.location.href = `/store/trade/${pokemonId}`;
+        });
+    });
+</script>
+</html>

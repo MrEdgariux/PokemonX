@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Adding An User {{ user[1] }}</title>
+    <style>
+        ::selection {
+            background-color: #fbff00;
+            color: #000000;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1d1c1c;
+            margin: 0;
+            padding: 0;
+            background-image: url("https://i.ibb.co/KjbVmkx/background.jpg");
+            background-repeat: no-repeat;
+            background-size: cover;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding-top: 10px;
+        }
+
+        .buttons a {
+            display: inline-block;
+            margin: 0 10px;
+            padding: 10px 20px;
+            background-color: #ffffff81;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #000000;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .buttons button {
+            display: inline-block;
+            margin: 0 10px;
+            padding: 10px 20px;
+            background-color: #ffffff81;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #000000;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .buttons a:hover {
+            background-color: #fbff00;
+        }
+        .buttons button:hover {
+            background-color: #fbff00;
+        }
+
+        .center{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.8);
+            border-radius: 12px;
+            border: 2px solid #ffffff;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            color: #ffffff;
+            font-family: 'Courier New', Courier, monospace;
+            text-align: center;
+        }
+
+        input {
+            padding: 10px;
+            border-radius: 6px;
+            background-color: #ffae0077;
+        }
+
+        select {
+            padding: 10px;
+            border-radius: 6px;
+            background-color: #ffae0077;
+        }
+        
+        h1 {
+            color: #ffffff;
+            text-align: center;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        
+        p {
+            color: #bbbbbb;
+            line-height: 1.5;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        div.alert {
+            padding: 10px;
+            color: white;
+            margin-bottom: 15px;
+            border-radius: 6px;
+        }
+
+        .danger {
+            background-color: #f44336;
+        }
+        .success {
+            background-color: #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <div class="center">
+        <div class="container">
+            <h1>Add {{ user[1] }} money / gems</h1>
+            <form method="POST">
+                
+                {% if error %}
+                    <div class="alert danger">{{ error }}</div>
+                {% elif success %}
+                    <div class="alert success">{{ success }}</div>
+                {% endif %}
+
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" value="{{ user[1] }}" required readonly><br><br>
+
+                <label for="moneyHave">Add money:</label>
+                <input type="number" id="moneyHave" name="money" value="0" min="0" max="1000000" required><br><br>
+
+                <label for="gemsHave">Add gems:</label>
+                <input type="number" id="gemsHave" name="gems" value="0" min="0" max="1000000" required><br><br>
+                
+                <div class="buttons"><button type="submit">Add</div>
+
+            </form>
+            
+        </div>
+    </div>
+</body>
+</html>

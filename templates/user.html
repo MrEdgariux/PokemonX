@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>User Profile</title>
+    <style>
+        ::selection {
+            background-color: #fbff00;
+            color: #000000;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1d1c1c;
+            margin: 0;
+            padding: 0;
+            background-image: url("https://static.vecteezy.com/system/resources/previews/024/625/582/non_2x/cute-yellow-mouse-character-background-free-vector.jpg");
+            background-repeat: no-repeat;
+            background-size: cover;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding-top: 10px;
+        }
+
+        .buttons a {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 250px;  /* Set the width of the buttons */
+            height: 25px;  /* Set the height of the buttons */
+            margin: 0 10px;
+            padding: 10px 20px;
+            background-color: #ffffff81;
+            border-radius: 6px;
+            text-decoration: none;
+            color: #000000;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .buttons a:hover {
+            background-color: #fbff00;
+        }
+
+        .center{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.8);
+            border-radius: 12px;
+            border: 2px solid #ffffff;
+        }
+        
+        h1 {
+            color: #ffffff;
+            text-align: center;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        
+        p {
+            color: #bbbbbb;
+            line-height: 1.5;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        div.stat {
+            justify-content: space-between;
+            padding: 10px;
+            margin: 10px;
+            background-color: #ffffff81;
+            border-radius: 6px;
+        }
+
+        div.stat p {
+            margin: 0;
+            text-align: center;
+            color: rgb(0, 89, 255);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="center">
+        <div class="container">
+            {% if user[5] == "admin" %}
+                <h1>Welcome {{ user[1] }}!</h1>
+                <div class="stat">
+                    <p>You have: {{ user[3] }} $ and {{ user[4] }} gems</p>
+                </div>
+                <p>You have access to all project moderation tools.</p>
+                <p>You can modify our project as you like!</p>
+                <div class="buttons">
+                    <a href="/admin/create-pokemon">Create pokemon</a>
+                    <a href="/admin/list-pokemons">Modify pokemon</a>
+                </div>
+                <div class="buttons">
+                    <a href="/admin/create-user">Create user</a>
+                    <a href="/admin/list-users">Modify users</a>
+                </div>
+                <div class="buttons">
+                    <a href="/">Home</a>
+                    <a href="/user/logout">Logout</a>
+                </div>
+            {% else %}
+                <h1>Welcome {{ user[1] }}</h1>
+                <div class="stat">
+                    <p>You have: {{ user[3] }} $ and {{ user[4] }} gems</p>
+                </div>
+                <p>You've successfully logged in into our project.</p>
+                <p>This means that you now have access to exclusive content!</p>
+                <div class="buttons">
+                    <a href="/user/list-pokemons">Your pokemons</a>
+                    <a href="/user/logout">Logout</a>
+                    <a href="/">Home</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
