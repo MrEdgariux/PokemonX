@@ -1,17 +1,11 @@
-
+from dotenv import load_dotenv
+from os import environ
+load_dotenv()
 version = '1.5.1'
 gems_price = 100
 version_db = version.replace('.', '_')
-dsa = "SQLite" # "SQLite" or "MySQL"
-mysql_connection = {
-        'host': 'localhost',
-        'user': 'root',
-        'password': '',
-        'database': 'db',
-}
-
-mongodb_connection = "mongodb+srv://mongodbbalance705:Vn1uNcgdg0vNWpAj@cluster0.kqkzgbs.mongodb.net/?retryWrites=true&w=majority"
-config_mongodb_db = "PokemonX"
+mongodb_connection = environ("mongodb_url")
+config_mongodb_db = environ("mongodb_db")
 
 # ----- [ MESSAGES ] ----- #
 
