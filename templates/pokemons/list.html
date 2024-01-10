@@ -159,15 +159,15 @@
                 </div>
                 {% else %}
                     {% if is_admin %}
-                    {% if error %}
-                        <div class="alert danger">
-                            {{ error }}
-                        </div>
-                    {% elif success %}
-                        <div class="alert success">
-                            {{ success }}
-                        </div>
-                    {% endif %}
+                        {% if error %}
+                            <div class="alert danger">
+                                {{ error }}
+                            </div>
+                        {% elif success %}
+                            <div class="alert success">
+                                {{ success }}
+                            </div>
+                        {% endif %}
                         {% for pokemon in pokemons %}
                             <li>
                                 {{ pokemon[1] }}

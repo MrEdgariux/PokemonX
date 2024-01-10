@@ -140,16 +140,16 @@
                 <input type="password" id="password" name="password"><br><br>
 
                 <label for="moneyHave">Money have:</label>
-                <input type="number" id="moneyHave" name="money" value="{{ user[4] }}" required><br><br>
+                <input type="number" id="moneyHave" name="money" value="{{ user[3] }}" required><br><br>
 
                 <label for="gemsHave">Gems have:</label>
-                <input type="number" id="gemsHave" name="gems" value="{{ user[5] }}" required><br><br>
+                <input type="number" id="gemsHave" name="gems" value="{{ user[4] }}" required><br><br>
 
 
                 <label for="role">Role:</label>
                 <select id="role" name="role">
-                    <option value="user" {% if pokemon[4] == "user" %}selected{% endif %}>User</option>
-                    <option value="admin" {% if pokemon[4] == "admin" %}selected{% endif %}>Admin</option>
+                    <option value="user" {% if user[5] == "user" %}selected{% endif %}>User</option>
+                    <option value="admin" {% if user[5] == "admin" %}selected{% endif %}>Admin</option>
                 </select>
                 
                 <div class="buttons"><button type="submit">Modify</div>

@@ -42,7 +42,11 @@
         }
 
         .buttons button {
-            display: inline-block;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 250px;  /* Set the width of the buttons */
+            height: 50px;  /* Set the height of the buttons */
             margin: 0 10px;
             padding: 10px 20px;
             background-color: #ffffff81;
@@ -146,58 +150,57 @@
         .success {
             background-color: #00ff08;
         }
+
+        .danger-buttons button {
+            border-color: red;
+        }
     </style>
 </head>
 <body>
     <div class="center">
         <div class="container">
-            <h1>Users</h1>
+            <h1>User's {{ user[1] }} pokemons</h1>
             <ul>
-                {% if users|length == 0 %}
+                {% if pokemons|length == 0 %}
                 <div class="alert danger">
                     No pokemons found
                 </div>
                 {% else %}
-                    {% for user in users %}
+                    {% for pokemon in pokemons %}
                         <li>
-                            {{ user[1] }}
-                            {% if user[0] != you %}
-                                <div class="buttons veiksmai">
-                                    <button type="button" id="pokemons" data-pokemonId="{{ user[0] }}">Pokemons</button>
-                                    <button type="button" id="modify" data-pokemonId="{{ user[0] }}">Modify</button>
-                                    <button type="button" id="delete" data-pokemonId="{{ user[0] }}">Delete</button>
-                                </div>
-                            {% endif %}
+                            {{ pokemon[1] }}
+                            <div class="buttons veiksmai danger-buttons">
+                                <button type="button" id="refund" data-pokemonId="{{ pokemon[0] }}">Refund Pokemon</button>
+                                <button type="button" id="take" data-pokemonId="{{ pokemon[0] }}">Take Pokemon</button>
+                                <button type="button" id="kidnap" data-pokemonId="{{ pokemon[0] }}">Kidnap Pokemon</button>
+                            </div>
                             <div class="buttons veiksmai">
-                                <button type="button" id="addM" data-pokemonId="{{ user[0] }}">Add Money</button>
-                                <button type="button" id="setM" data-pokemonId="{{ user[0] }}">Set Money</button>
+                                <button type="button" id="upgrade" data-pokemonId="{{ pokemon[0] }}">Upgrade Pokemon</button>
                             </div>
                         </li>
                     {% endfor %}
                 {% endif %}
             </ul>
             <div class="buttons veiksmai">
-                <a onclick="history.back()" style="cursor:pointer;">Back to menu</a>
+                <button onclick="history.back()">Back to menu</button>
+                <button type="button" id="add-pokemon">Add Pokemon</button>
             </div>
         </div>
     </div>
 </body>
 <script>
-    const modifyButtons = document.querySelectorAll("#modify");
-    const pokeBtn = document.querySelectorAll("#pokemons");
-    const deleteButtons = document.querySelectorAll("#delete");
-    const addMButtons = document.querySelectorAll("#addM");
-    const setMButtons = document.querySelectorAll("#setM");
+    const refundBtn = document.querySelectorAll("#refund");
+    const deleteButtons = document.querySelectorAll("#take");
+    const addMButtons = document.querySelectorAll("#kidnap");
+    const setMButtons = document.querySelectorAll("#upgrade");
+    const addPokeBtn = document.getElementById("add-pokemon");
 
-    modifyButtons.forEach(button => {
+    refundBtn.forEach(button => {
         button.addEventListener("click", () => {
-            window.location.href = `/admin/modify-user/${button.dataset.pokemonid}`;
-        });
-    });
-
-    pokeBtn.forEach(button => {
-        button.addEventListener("click", () => {
-            window.location.href = `/admin/list-users-pokemons/${button.dataset.pokemonid}`;
+            var confirm = confirm("Are you sure that you wanna refund this pokemon?");
+            if (confirm) {
+                window.location.href = `/admin/modify-users-pokemons/refund/${button.dataset.pokemonid}/{{ user[0] }}`;
+            }
         });
     });
 
@@ -219,6 +222,10 @@
         button.addEventListener("click", () => {
             window.location.href = `/admin/users/set-money/${button.dataset.pokemonid}`;
         });
+    });
+
+    addPokeBtn.addEventListener("click", () => {
+        window.location.href = `/admin/modify-users-pokemons/{{ user[0] }}`;
     });
 </script>
 </html>

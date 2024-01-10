@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>User Profile</title>
+    <title>PokemonX | Update Systems | Database</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}" />
     <style>
         ::selection {
             background-color: #fbff00;
@@ -12,7 +13,7 @@
             background-color: #1d1c1c;
             margin: 0;
             padding: 0;
-            background-image: url("https://static.vecteezy.com/system/resources/previews/024/625/582/non_2x/cute-yellow-mouse-character-background-free-vector.jpg");
+            background-image: url("https://i.ibb.co/KjbVmkx/background.jpg");
             background-repeat: no-repeat;
             background-size: cover;
         }
@@ -72,59 +73,37 @@
             line-height: 1.5;
             font-family: 'Courier New', Courier, monospace;
         }
-
-        div.stat {
-            justify-content: space-between;
-            padding: 10px;
-            margin: 10px;
-            background-color: #ffffff81;
-            border-radius: 6px;
-        }
-
-        div.stat p {
-            margin: 0;
-            text-align: center;
-            color: rgb(0, 89, 255);
-            font-weight: bold;
-        }
     </style>
 </head>
 <body>
     <div class="center">
         <div class="container">
-            {% if user[4] == "admin" %}
-                <h1>Welcome {{ user[1] }}!</h1>
-                <div class="stat">
-                    <p>You have: {{ user[2] }} $ and {{ user[3] }} gems</p>
-                </div>
-                <p>You have access to all project moderation tools.</p>
-                <p>You can modify our project as you like!</p>
-                <div class="buttons">
-                    <a href="/admin/create-pokemon">Create pokemon</a>
-                    <a href="/admin/list-pokemons">Modify pokemon</a>
-                </div>
-                <div class="buttons">
-                    <a href="/admin/create-user">Create user</a>
-                    <a href="/admin/list-users">Modify users</a>
-                </div>
-                <div class="buttons">
-                    <a href="/">Home</a>
-                    <a href="/user/logout">Logout</a>
-                </div>
+            <h1>Update database</h1>
+            {% if config_ver_db == ver_db %}
+                <p>Database version is in latest state.</p>
             {% else %}
-                <h1>Welcome {{ user[1] }}!</h1>
-                <div class="stat">
-                    <p>You have: {{ user[2] }} $ and {{ user[3] }} gems</p>
-                </div>
-                <p>You've successfully logged in into our project.</p>
-                <p>This means that you now have access to exclusive content!</p>
+                <p>Your database version is {{ config_ver_db }}</p>
+                <p>Latest database version is {{ ver_db }}.</p>
+                <p>This update is required to operate as normally.</p>
+                <p style="color: red; font-weight: bold;">THIS UPDATE WILL PERFORM FULL DATABASE PURGE. YOU MUST BACKUP YOUR DATABASE BEFORE DOING THIS</p>
                 <div class="buttons">
-                    <a href="/user/list-pokemons">Your pokemons</a>
-                    <a href="/user/logout">Logout</a>
-                    <a href="/">Home</a>
+                    <form id="updateForm" method="post" action="{{ url_for('update_database') }}">
+                        <button type="button" onclick="submitForm()">Update</button>
+                    </form>
                 </div>
             {% endif %}
+            <div class="buttons">
+                <a href="/">Cancel</a>
+            </div>
         </div>
     </div>
 </body>
+<head>
+    <script>
+        function submitForm() {
+            // Find the form element and submit it
+            document.getElementById('updateForm').submit();
+        }
+    </script>
+</head>
 </html>

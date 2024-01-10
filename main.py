@@ -1,9 +1,9 @@
-import sqlite3, time, signal
+import time, signal
 from datetime import datetime
 from functions import *
 from config import *
 from flask import g, request, render_template, Flask, redirect, url_for, session
-from flask_socketio import SocketIO, send, emit
+# from flask_socketio import SocketIO, emit
 
 def signal_handler(sig, frame):
     print('You pressed Ctrl+C!')
@@ -12,14 +12,16 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 app = Flask(__name__)
-socketio = SocketIO(app)
+# socketio = SocketIO(app)
 
+disable_requests = False # This will change automatically, DO NOT TOUCH
+system_in_update_state = False # This will change automatically, DO NOT TOUCH
 
 
 # Set the secret key to some random bytes. Keep this really secret!
+# Don't worry, it does not have to be secure, it's just a key used to encrypt your data.
+# Also, it's just a basic example, so we don't care about security.
 app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'
-
-validate_tables()
 
 def set_user_session(username, user_id):
     session['username'] = username
@@ -46,6 +48,8 @@ def page_not_found(e):
 
 @app.before_request
 def start_timer():
+    if system_in_update_state or disable_requests:
+        return "ERROR OCCURRED. TRY AGAIN LATER"
     if is_user_logged_in() and not user_exists(get_user_session()):
         logout_user()
     g.start = time.time()
@@ -54,82 +58,116 @@ def start_timer():
 def log_request(response):
     if 'start' not in g:
         return response
+    
+    ver = req_config_ver()
 
-    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
-    cursor = db.cursor()
+    if ver != version:
+        print(f"Versions incorrect. {ver} - {version}")
+        return redirect(url_for('update_database'))
+
+    db, client = connect_to_mongodb()
+    page_visits_collection = db["page_visits"]
+    user_activities_collection = db["user_activities"]
+
     visit_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    page_name = request.path  # get the full path of the request
-    refer = request.referrer  # get the referer (if any)
-    method = request.method  # get the request method (GET, POST, etc.)
-    status_code = response.status_code  # get the response status code (200, 201, 404, etc.)
+    page_name = request.path
+    refer = request.referrer
+    method = request.method
+    status_code = response.status_code
+    ip = request.remote_addr
+
+    log_data = {
+        "ip": ip,
+        "page_name": page_name,
+        "visit_time": visit_time,
+        "method": method,
+        "status_code": status_code,
+        "ref": refer
+    }
+
+    # Log page visit
+    page_visits_collection.insert_one(log_data)
+
+    # Log user activity if logged in
     if is_user_logged_in():
         user_id = get_user_id()
-        cursor.execute('''
-            INSERT INTO user_activities(user_id, page_uri, visit_time, method, status_code)
-            VALUES(?, ?, ?, ?, ?)
-        ''', (user_id, page_name, visit_time, method, status_code))
-    cursor.execute('''
-        INSERT INTO page_visits(page_name, visit_time, method, status_code, ref)
-        VALUES(?, ?, ?, ?, ?)
-    ''', (page_name, visit_time, method, status_code, refer))
-    db.commit()
-    db.close()
+        user_activity_data = {
+            "user_id": user_id,
+            "page_uri": page_name,
+            "visit_time": visit_time,
+            "method": method,
+            "status_code": status_code
+        }
+        user_activities_collection.insert_one(user_activity_data)
 
+    client.close()
     return response
 
-@socketio.on('connect')
-def handle_connection():
-    if is_user_logged_in():
-        print(f"Client connected: {get_user_session()}")
-        emit('user_joined', get_user_session(), broadcast=True)
-        load_messages()
-    else:
-        print("Not logged in user connected")
-        emit('redirect', {'url': url_for('login')} )
+# @socketio.on('connect')
+# def handle_connection():
+#     if is_user_logged_in():
+#         print(f"Client connected: {get_user_session()}")
+#         emit('user_joined', get_user_session(), broadcast=True)
+#         load_messages()
+#     else:
+#         print("Not logged in user connected")
+#         emit('redirect', {'url': url_for('login')} )
 
-@socketio.on('disconnect')
-def handle_disconnection():
-    if is_user_logged_in():
-        print(f"Client disconnected: {get_user_session()}")
-        emit('user_left', get_user_session(), broadcast=True)
+# @socketio.on('disconnect')
+# def handle_disconnection():
+#     if is_user_logged_in():
+#         print(f"Client disconnected: {get_user_session()}")
+#         emit('user_left', get_user_session(), broadcast=True)
 
-@socketio.on('user_joined')
-def handle_user_joined(username):
-    print(f"User {username} joined")
-    data = {}
-    data['message'] = f"{username} joined the chat"
-    data['is_system'] = True
-    emit('chat', data, broadcast=True)
+# @socketio.on('user_joined')
+# def handle_user_joined(username):
+#     print(f"User {username} joined")
+#     data = {}
+#     data['message'] = f"{username} joined the chat"
+#     data['is_system'] = True
+#     emit('chat', data, broadcast=True)
 
-@socketio.on('user_left')
-def handle_user_joined(username):
-    print(f"User {username} left")
-    data = {}
-    data['message'] = f"{username} left the chat"
-    data['is_system'] = True
-    emit('chat', data, broadcast=True)
+# @socketio.on('user_left')
+# def handle_user_joined(username):
+#     print(f"User {username} left")
+#     data = {}
+#     data['message'] = f"{username} left the chat"
+#     data['is_system'] = True
+#     emit('chat', data, broadcast=True)
 
-@socketio.on('send_message')
-def handle_send_message(data):
-    add_chat_message(get_user_id(), data['message'])
-    if data['message'].startswith('/'):
-        print(f"Command received: {data['message']} by {get_user_session()}")
-        data_served = chat_handle_commands(data['message'], get_user_id())
-        if data_served is None:
-            print("Command not found, or error occurred")
-            return
-        emit('chat', data_served, broadcast=False)
-        return
-    print(f"Message received: {data['message']} by {get_user_session()}")
-    data['is_system'] = False
-    data['username'] = get_user_session()
-    emit('chat', data, broadcast=True)
+# @socketio.on('send_message')
+# def handle_send_message(data):
+#     add_chat_message(get_user_id(), data['message'])
+#     if data['message'].startswith('/'):
+#         print(f"Command received: {data['message']} by {get_user_session()}")
+#         data_served = chat_handle_commands(data['message'], get_user_id())
+#         if data_served is None:
+#             print("Command not found, or error occurred")
+#             return
+#         emit('chat', data_served, broadcast=False)
+#         return
+#     print(f"Message received: {data['message']} by {get_user_session()}")
+#     data['is_system'] = False
+#     data['username'] = get_user_session()
+#     emit('chat', data, broadcast=True)
 
-def test_system_message():
-    data = {}
-    data['message'] = "System message"
-    data['is_system'] = True
-    emit('chat', data, broadcast=True)
+# # ----- [TRADE SYSTEM] -----
+    
+# @socketio.on('trade_sendItem')
+# def handle_trade_item(data):
+#     add_chat_message(get_user_id(), data['message'])
+#     if data['message'].startswith('/'):
+#         print(f"Command received: {data['message']} by {get_user_session()}")
+#         data_served = chat_handle_commands(data['message'], get_user_id())
+#         if data_served is None:
+#             print("Command not found, or error occurred")
+#             return
+#         emit('chat', data_served, broadcast=False)
+#         return
+#     print(f"Message received: {data['message']} by {get_user_session()}")
+#     data['is_system'] = False
+#     data['username'] = get_user_session()
+#     emit('chat', data, broadcast=True)
 
 def load_messages():
     messages = get_chat_messages()
@@ -151,10 +189,6 @@ def home():
 def about():
     return render_template('about.html')
 
-@app.route('/test/send', methods=['GET'])
-def tsend():
-    return render_template('sender.html')
-
 @app.route('/contact', methods=['GET'])
 def contact():
     return render_template('contact.html')
@@ -163,14 +197,71 @@ def contact():
 def updates():
     return render_template('updates.html')
 
+# ------ [ UPDATE SYSTEM ] ------
+
+@app.route('/update/database', methods=['GET', 'POST'])
+def update_database():
+    if request.method == 'POST':
+        client = MongoClient(mongodb_connection)
+        db = client.get_database(config_mongodb_db)
+        collection_names = db.list_collection_names()
+
+        config_col = client.get_database(config_mongodb_db).get_collection("configurations")
+        versions = config_col.find_one({}, {"game_version": 1, "_id": 0})
+        record_ver = versions.get("game_version") if versions else None
+
+        if record_ver == version:
+            print("[! SYSTEM UPDATE FALSE ALARM !] -> SOMEONE TRIED TO FORCE SYSTEM UPDATE. FAILED")
+            return "ERROR - You cannot do that. VER_SIMILAR"
+        
+        if not is_user_logged_in() or not validate_admin(get_user_session()):
+            print("[! SYSTEM UPDATE FALSE ALARM !] -> SOMEONE TRIED TO FORCE SYSTEM UPDATE. FAILED")
+            return "ERROR - You cannot do that. PERMISSION_DENIED"
+
+        global disable_requests, system_in_update_state
+        disable_requests = True
+        system_in_update_state = True
+        
+        
+        if disable_requests and system_in_update_state:
+            print("[! SYSTEM UPDATE !] -> SYSTEM UPDATE STARTING. ALL REQUESTS WILL BE REJECTED")
+
+        for collection_name in collection_names:
+            if collection_name == "configurations":
+                continue
+            collection = db[collection_name]
+            collection.delete_many({})
+            print(f"[! SYSTEM UPDATE !] -> DATABASES COLLECTION {collection_name} WAS PURGED.")
+        
+        new_values = {
+            "$set": {
+                "game_version": version,
+                "last_updated_at": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+        }
+        config_col.update_one({}, new_values)
+        print("Game / Data version updated.")
+        
+
+        return redirect(url_for('index'))  # Redirect to the main page after update
+    verss = req_config_ver()
+    return render_template('update_database.html', ver_db=version, config_ver_db=verss)
+
 # ------ [ USER ] ------
 
 @app.route('/user', methods=['GET'])
 def userData():
     if is_user_logged_in():
-        return render_template('user.html', user=get_user_by_username(get_user_session()))
+        useris = get_user_by_username(get_user_session())
+        useriss = [useris['_id'], useris['username'], useris['money'], useris['gems'], useris['role']]
+        return render_template('user.html', user=useriss)
     return redirect(url_for('login'))
 
+@app.route('/chat', methods=['GET'])
+def tsend():
+    if not is_user_logged_in():
+        return redirect(url_for('login'))
+    return render_template('chat.html')
 
 @app.route('/user/login', methods=['POST', 'GET'])
 def login():
@@ -184,7 +275,7 @@ def login():
         # Validate username and password
         if validate_credentials(username, password):
             # Set user session or token
-            user_id = get_user_by_username(username)[0]
+            user_id = str(get_user_by_username(username)["_id"])
             set_user_session(username, user_id)
             return redirect(url_for('userData'))
         else:
@@ -217,7 +308,7 @@ def registeras():
             return render_template('register.html', error=error)
         elif register_user(username, password_hashing(password)):
             # Set user session or token
-            user_id = get_user_by_username(username)[0]
+            user_id = str(get_user_by_username(username)["_id"])
             set_user_session(username, user_id)
             return redirect(url_for('userData'))
         else:
@@ -237,6 +328,11 @@ def userListPokemons():
 def logout():
     logout_user()
     return redirect(url_for('home'))
+
+def userData():
+    if is_user_logged_in():
+        return render_template('user.html', user=get_user_by_username(get_user_session()))
+    return redirect(url_for('login'))
 
 # ------ [ POKEMON STORE ] ------
 
@@ -461,7 +557,7 @@ def adminModifyUser(id):
             return render_template('users/modify.html', error=error, user=get_user_by_id(id))
         
         if password:
-            if modify_user(username, password, money, gems, role, id):
+            if modify_user(username, money, gems, role, password, id):
                 success = 'User modified successfully'
                 return render_template('users/modify.html', success=success, user=get_user_by_id(id))
             else:
@@ -520,19 +616,12 @@ def adminCreateUser():
          
     return render_template('users/create.html')
 
+@app.route('/admin/list-users-pokemons/<int:vartotojoId>', methods=['GET'])
+def adminListUserPokemons(vartotojoId):
+    if not is_user_logged_in() or not validate_admin(get_user_session()):
+        return redirect(url_for('userData'))
+    return render_template('users/list_pokemons.html', user=get_user_by_id(vartotojoId), pokemons=get_user_pokemons(vartotojoId))
+
 if __name__ == '__main__':
-    socketio.run(app, debug=True)
-
-
-# https://i.ibb.co/2SgpHyb/mredgariux-pokemon-group-v-5-2-54c368c8-1ae3-43a6-994c-22a3d60b7f00-0.png
-# https://i.ibb.co/VthjvKL/mredgariux-pokemon-group-v-5-2-54c368c8-1ae3-43a6-994c-22a3d60b7f00-1.png
-# https://i.ibb.co/CmwqY85/mredgariux-pokemon-group-v-5-2-54c368c8-1ae3-43a6-994c-22a3d60b7f00-2.png
-# https://i.ibb.co/5j8Y8pH/mredgariux-pokemon-group-v-5-2-54c368c8-1ae3-43a6-994c-22a3d60b7f00-3.png
-# https://i.ibb.co/svDVkPY/mredgariux-Pokemon-in-lucid-dream-v-5-2-293edd87-d8d5-4b54-b4e9-4231522febff-0.png
-# https://i.ibb.co/cDRwM9k/mredgariux-Pokemon-in-lucid-dream-v-5-2-293edd87-d8d5-4b54-b4e9-4231522febff-1.png
-# https://i.ibb.co/x7Sk59s/mredgariux-Pokemon-in-lucid-dream-v-5-2-293edd87-d8d5-4b54-b4e9-4231522febff-2.png
-# https://i.ibb.co/DC74ZjW/mredgariux-Pokemon-in-lucid-dream-v-5-2-293edd87-d8d5-4b54-b4e9-4231522febff-3.png
-# https://i.ibb.co/cFG9Mv4/mredgariux-pokemon-v-5-2-1d18c81c-ed9d-4611-ad77-fdf8ec11ca26-0.png
-# https://i.ibb.co/rGXWKGw/mredgariux-pokemon-v-5-2-1d18c81c-ed9d-4611-ad77-fdf8ec11ca26-1.png
-# https://i.ibb.co/ZHnBRqr/mredgariux-pokemon-v-5-2-1d18c81c-ed9d-4611-ad77-fdf8ec11ca26-2.png
-# https://i.ibb.co/yQBy9k3/mredgariux-pokemon-v-5-2-1d18c81c-ed9d-4611-ad77-fdf8ec11ca26-3.png
+    # socketio.run(app, debug=True, host='192.168.68.100', port=5000)
+    app.run(debug=True)
