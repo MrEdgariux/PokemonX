@@ -92,10 +92,10 @@
 <body>
     <div class="center">
         <div class="container">
-            {% if user[4] == "admin" %}
+            {% if user[5] == "admin" %}
                 <h1>Welcome {{ user[1] }}!</h1>
                 <div class="stat">
-                    <p>You have: {{ user[2] }} $ and {{ user[3] }} gems</p>
+                    <p>You have: {{ user[3] }} $ and {{ user[4] }} gems</p>
                 </div>
                 <p>You have access to all project moderation tools.</p>
                 <p>You can modify our project as you like!</p>
@@ -112,9 +112,9 @@
                     <a href="/user/logout">Logout</a>
                 </div>
             {% else %}
-                <h1>Welcome {{ user[1] }}!</h1>
+                <h1>Welcome {{ user[1] }}</h1>
                 <div class="stat">
-                    <p>You have: {{ user[2] }} $ and {{ user[3] }} gems</p>
+                    <p>You have: {{ user[3] }} $ and {{ user[4] }} gems</p>
                 </div>
                 <p>You've successfully logged in into our project.</p>
                 <p>This means that you now have access to exclusive content!</p>

@@ -1,464 +1,441 @@
-from pymongo import MongoClient
+import sqlite3, pymysql, pymongo
 from config import *
 from flask_socketio import emit
-from datetime import datetime
 
 from classes import ChatCommandHandler
 
-def connect_to_mongodb():
-    client = MongoClient(mongodb_connection)
-    db = client.get_database(config_mongodb_db)
-    config_col = client.get_database(config_mongodb_db).get_collection("configurations")
-    
-    # Retrieve game and data versions from the configurations collection
-    versions = config_col.find_one({}, {"game_version": 1, "_id": 0})
-    Gversion = versions.get("game_version") if versions else None
-    
-    if Gversion is None:
-        # Game / Data version not found, create it
-        data = {"game_version": version, "last_updated_at": datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
-        config_col.insert_one(data)
-        print("Game / Data version was not found. Created.")
-    elif Gversion != version:
-        print(f"Client database must be updated in order to continue using the website.")
-        return "ERROR - Incorrect database version", None
-
-    return db, client
-
-def req_config_ver():
-    client = MongoClient(mongodb_connection)
-    config_col = client.get_database(config_mongodb_db).get_collection("configurations")
-    versions = config_col.find_one({}, {"game_version": 1, "_id": 0})
-    Gversion = versions.get("game_version") if versions else None
-    if Gversion:
-        return Gversion
-    else:
-        return None
 # ----- [ Validation Functions ] ----- #
 
+def validate_tables():
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+
+    # Create the table if it doesn't exist
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS pokemons(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            type TEXT NOT NULL,
+            name TEXT NOT NULL,
+            price_money INTEGER NOT NULL,
+            price_gems INTEGER NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(name)
+        )
+    ''')
+    # cursor.execute('''
+    #     CREATE TABLE IF NOT EXISTS pokemons(
+    #         id INTEGER PRIMARY KEY AUTOINCREMENT,
+    #         type TEXT NOT NULL,
+    #         name TEXT NOT NULL,
+    #         price_money INTEGER NOT NULL,
+    #         price_gems INTEGER NOT NULL,
+                   
+    #         pokemon_health INTEGER NOT NULL DEFAULT 100,
+    #         pokemon_attack INTEGER NOT NULL DEFAULT 10,
+    #         pokemon_defense INTEGER NOT NULL DEFAULT 10,
+    #         pokemon_speed INTEGER NOT NULL DEFAULT 10,
+    #         pokemon_type TEXT NOT NULL,
+    #         pokemon_special_attack INTEGER NOT NULL,
+    #         pokemon_special_defense INTEGER NOT NULL DEFAULT 10,
+                   
+    #         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    #         FOREIGN KEY(pokemon_special_attack) REFERENCES pokemon_special_attacks(id),
+    #         UNIQUE(name)
+    #     )
+    # ''')
+
+    # cursor.execute('''
+    #     CREATE TABLE IF NOT EXISTS pokemon_special_attacks(
+    #         id INTEGER PRIMARY KEY AUTOINCREMENT,
+    #         name TEXT NOT NULL,
+    #         attack_power INTEGER NOT NULL,
+    #         attack_type TEXT NOT NULL,
+    #         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    #         UNIQUE(name)
+    #     )
+    # ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS user_favourite_pokemons(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            pokemon_id INTEGER NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY(pokemon_id) REFERENCES pokemons(id) ON DELETE CASCADE
+        )
+    ''')
+
+    # cursor.execute('''
+    #     CREATE TABLE IF NOT EXISTS battles(
+    #         id INTEGER PRIMARY KEY AUTOINCREMENT,
+    #         user_id INTEGER NOT NULL,
+    #         pokemon_id INTEGER NOT NULL,
+    #         pokemon_level INTEGER NOT NULL,
+    #         pokemon_experience INTEGER NOT NULL,
+    #         battle_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    #         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+    #         FOREIGN KEY(pokemon_id) REFERENCES pokemons(id) ON DELETE CASCADE
+    #     )
+    # ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            password TEXT,
+            money INTEGER NOT NULL DEFAULT 0,
+            gems INTEGER NOT NULL DEFAULT 0,
+            role TEXT NOT NULL DEFAULT 'user',
+            UNIQUE(username)
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS pokemons_have(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            pokemon_id INTEGER NOT NULL,
+            pokemon_level INTEGER NOT NULL DEFAULT 1,
+            pokemon_experience INTEGER NOT NULL DEFAULT 0,
+            purchase_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+            purchase_type TEXT NOT NULL,
+            purchase_price INTEGER NOT NULL,
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY(pokemon_id) REFERENCES pokemons(id) ON DELETE CASCADE
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS page_visits(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ip TEXT NOT NULL,
+            page_name TEXT NOT NULL,
+            ref TEXT,
+            visit_time TEXT NOT NULL,
+            method TEXT NOT NULL,
+            status_code INTEGER NOT NULL
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS user_activities(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            page_uri TEXT NOT NULL,
+            visit_time TEXT NOT NULL,
+            method TEXT NOT NULL,
+            status_code INTEGER NOT NULL,
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS chat_messages(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            message TEXT NOT NULL,
+            is_command TEXT NOT NULL,
+            message_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    ''')
+
+    db.commit()
+    db.close()
+
 def validate_credentials(username, password):
-    db, client = connect_to_mongodb()
-    users_collection = db["users"]
-
-    user = users_collection.find_one({"username": username})
-    
-    client.close()
-
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM users WHERE username=?''', (username,))
+    user = cursor.fetchone()
+    db.close()
     if user is None:
         return False
-
     return verify_passwords(password, username)
 
-def validate_admin(username):
-    db, client = connect_to_mongodb()
-    users_collection = db["users"]
-
-    user = users_collection.find_one({"username": username, "role": "admin"})
-
-    client.close()
-
+def validate_purchase_code(purchaseCode):
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM users WHERE purchaseCode=?''', (purchaseCode,))
+    user = cursor.fetchone()
+    db.close()
     if user is None:
         return False
+    return True
 
+def validate_admin(username):
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM users WHERE username=? AND role='admin' ''', (username,))
+    user = cursor.fetchone()
+    db.close()
+    if user is None:
+        return False
     return True
 
 # ----- [ User Authentification Functions ] ----- #
 
 
 def register_user(username, password):
-    # Connect to MongoDB
-    db, client = connect_to_mongodb()
-
-    # Choose the users collection
-    users_collection = db["users"]
-
-    # Check if the username already exists
-    if user_exists(username):
-        client.close()
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM users WHERE username=?''', (username,))
+    user = cursor.fetchone()
+    if user is not None:
         return False
-
-    # Insert the new user into the collection
-    new_user = {"username": username, "password": password, "role": "user", "money": 0, "gems": 0}
-    users_collection.insert_one(new_user)
-
-    # Close the MongoDB connection
-    client.close()
-
+    cursor.execute('''INSERT INTO users(username, password) VALUES(?, ?)''', (username, password))
+    db.commit()
+    db.close()
     return True
 
 # ----- [ Pokemon Functions ] ----- #
 
 def create_pokemon(name, type, price, price_gems):
-    db, client = connect_to_mongodb()
-    pokemons_collection = db["pokemons"]
-
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
     if get_pokemon(name) is not None:
-        client.close()
         return False
-
-    # Additional fields like creation_date can be added as needed
-    pokemon_data = {
-        "name": name,
-        "type": type,
-        "price_money": price,
-        "price_gems": price_gems,
-        "created_at": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    }
-
-    pokemons_collection.insert_one(pokemon_data)
-    client.close()
+    cursor.execute('''INSERT INTO pokemons(name, type, price_money, price_gems) VALUES(?, ?, ?, ?)''', (name, type, price, price_gems))
+    db.commit()
+    db.close()
     return True
 
 def modify_pokemon(name, type, price, price_gems, pokemon_id):
-    db, client = connect_to_mongodb()
-    pokemons_collection = db["pokemons"]
-
-    pokemons_collection.update_one(
-        {"_id": pokemon_id},
-        {"$set": {
-            "name": name,
-            "type": type,
-            "price_money": price,
-            "price_gems": price_gems
-        }}
-    )
-    client.close()
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    cursor.execute('''UPDATE pokemons SET name=?, type=?, price_money=?, price_gems=? WHERE id=?''', (name, type, price, price_gems, pokemon_id))
+    db.commit()
+    db.close()
     return True
 
 def verify_pokemons():
-    db, client = connect_to_mongodb()
-    pokemons_collection = db["pokemons"]
-
-    # Retrieve all pokemons from the MongoDB collection
-    pokemons = list(pokemons_collection.find())
-
-    if not pokemons:
-        client.close()
+    from config import gems_price
+    # Verify if all pokemons have a correct gems price
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM pokemons''')
+    pokemons = cursor.fetchall()
+    if pokemons is None:
         return False
-
     for pokemon in pokemons:
-        current_price_gems = pokemon.get("price_gems")
-
-        # If price_gems is missing or incorrect, update it
-        if current_price_gems is None or current_price_gems != (pokemon["price_money"] / gems_price):
-            new_price_gems = pokemon["price_money"] / gems_price
-            pokemons_collection.update_one(
-                {"_id": pokemon["_id"]},
-                {"$set": {"price_gems": new_price_gems}}
-            )
-
-    client.close()
+        if pokemon[4] is None:
+            gems_price = pokemon[3] / gems_price
+            cursor.execute('''UPDATE pokemons SET price_gems=? WHERE id=?''', (gems_price, pokemon[0]))
+        elif pokemon[4] != (pokemon[3] / gems_price):
+            gems_price = pokemon[3] / gems_price
+            cursor.execute('''UPDATE pokemons SET price_gems=? WHERE id=?''', (gems_price, pokemon[0]))
+    db.commit()
+    db.close()
     return True
 
 def delete_pokemon(pokemon_id):
-    db, client = connect_to_mongodb()
-    pokemons_collection = db["pokemons"]
-    pokemons_collection.delete_one({"_id": pokemon_id})
-    client.close()
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    cursor.execute('''DELETE FROM pokemons WHERE id=?''', (pokemon_id,))
+    db.commit()
+    db.close()
     return True
 
 def get_pokemons():
-    db, client = connect_to_mongodb()
-    pokemons_collection = db["pokemons"]
-    pokemons = list(pokemons_collection.find())
-    client.close()
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM pokemons''')
+    pokemons = cursor.fetchall()
+    db.close()
     return pokemons
 
-def get_pokemon(name):
-    db, client = connect_to_mongodb()
-    pokemons_collection = db["pokemons"]
-    pokemon = pokemons_collection.find_one({"name": name})
-    client.close()
+def get_pokemon(pokemon):
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM pokemons WHERE name=?''', (pokemon,))
+    pokemon = cursor.fetchone()
+    db.close()
     return pokemon
 
 def get_pokemon_by_id(pokemon_id):
-    db, client = connect_to_mongodb()
-    pokemons_collection = db["pokemons"]
-    pokemon = pokemons_collection.find_one({"_id": pokemon_id})
-    client.close()
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM pokemons WHERE id=?''', (pokemon_id,))
+    pokemon = cursor.fetchone()
+    db.close()
     return pokemon
+
+def get_users_by_pokemon(pokemon_id):
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    cursor.execute('''SELECT users.* FROM pokemons_have INNER JOIN users ON pokemons_have.user_id=users.id WHERE pokemons_have.pokemon_id=?''', (pokemon_id,))
+    users = cursor.fetchall()
+    db.close()
+    return users
 
 # ----- [ User Functions ] ----- #
 
 def create_user(username, password, role):
-    # Password is already hashed so there is no functions for that.
-    db, client = connect_to_mongodb()
-    users_collection = db["users"]
-
-    # Check if user with the given username already exists
-    if user_exists(username):
-        client.close()
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    if get_user_by_username(username) is not None:
         return False
-
-    # Hash the password before storing it
-
-    user_data = {
-        "username": username,
-        "password": password,
-        "role": role
-    }
-
-    users_collection.insert_one(user_data)
-    client.close()
+    cursor.execute('''INSERT INTO users(username, password, role) VALUES(?, ?, ?)''', (username, password, role))
+    db.commit()
+    db.close()
     return True
 
-def modify_user(user_id, username, money, gems, role, password=None):
-    db, client = connect_to_mongodb()
-    users_collection = db["users"]
-
-    if not users_collection.find_one({"_id": user_id}):
-        client.close()
-        return False
-    
-    update_data = {
-        "$set": {
-            "username": username,
-            "money": money,
-            "gems": gems,
-            "role": role
-        }
-    }
-
-    if password:
-        hashed_password = password_hashing(password)
-        update_data["$set"]["password"] = hashed_password
-
-    users_collection.update_one({"_id": user_id}, update_data)
-    client.close()
+def modify_user(user_id, username, money, gems, role, password = None):
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    if password is None:
+        cursor.execute('''UPDATE users SET username=?, money=?, gems=?, role=? WHERE id=?''', (username, money, gems, role, user_id))
+    else:
+        cursor.execute('''UPDATE users SET username=?, money=?, gems=?, role=?, password=? WHERE id=?''', (username, money, gems, role, password, user_id))
+    db.commit()
+    db.close()
     return True
 
 def modify_user_money(user_id, money):
-    db, client = connect_to_mongodb()
-    users_collection = db["users"]
-
-    # Check if the user with the given ID exists
-    if not users_collection.find_one({"_id": user_id}):
-        client.close()
-        return False
-
-    users_collection.update_one({"_id": user_id}, {"$set": {"money": money}})
-    client.close()
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    cursor.execute('''UPDATE users SET money=? WHERE id=?''', (money, user_id))
+    db.commit()
+    db.close()
     return True
 
 def modify_user_gems(user_id, gems):
-    db, client = connect_to_mongodb()
-    users_collection = db["users"]
-
-    # Check if the user with the given ID exists
-    if not users_collection.find_one({"_id": user_id}):
-        client.close()
-        return False
-
-    users_collection.update_one({"_id": user_id}, {"$set": {"gems": gems}})
-    client.close()
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    cursor.execute('''UPDATE users SET gems=? WHERE id=?''', (gems, user_id))
+    db.commit()
+    db.close()
     return True
 
 def delete_user(user_id):
-    db, client = connect_to_mongodb()
-    users_collection = db["users"]
-
-    # Check if the user with the given ID exists
-    if not users_collection.find_one({"_id": user_id}):
-        client.close()
-        return False
-
-    users_collection.delete_one({"_id": user_id})
-    client.close()
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    cursor.execute('''DELETE FROM users WHERE id=?''', (user_id,))
+    db.commit()
+    db.close()
     return True
 
 def get_users():
-    db, client = connect_to_mongodb()
-    users_collection = db["users"]
-    users = list(users_collection.find())
-    client.close()
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM users''')
+    users = cursor.fetchall()
+    db.close()
     return users
 
 def get_user_by_id(user_id):
-    db, client = connect_to_mongodb()
-    users_collection = db["users"]
-    user = users_collection.find_one({"_id": user_id})
-    client.close()
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM users WHERE id=?''', (user_id,))
+    user = cursor.fetchone()
+    db.close()
     return user
 
 def get_user_by_username(username):
-    db, client = connect_to_mongodb()
-    users_collection = db["users"]
-    user = users_collection.find_one({"username": username})
-    client.close()
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM users WHERE username=?''', (username,))
+    user = cursor.fetchone()
+    db.close()
     return user
 
-def get_users_by_pokemon(pokemon_id):
-    db, client = connect_to_mongodb()
-    pokemons_have_collection = db["pokemons_have"]
-
-    # Use aggregation to join the collections and retrieve users by Pokemon ID
-    pipeline = [
-        {"$match": {"pokemon_id": pokemon_id}},
-        {"$lookup": {"from": "users", "localField": "user_id", "foreignField": "_id", "as": "user_info"}},
-        {"$unwind": "$user_info"},
-        {"$project": {"_id": 0, "user_id": 1, "username": "$user_info.username"}}
-    ]
-
-    users_with_pokemon = list(pokemons_have_collection.aggregate(pipeline))
-    client.close()
-    return users_with_pokemon
-
 def user_exists(username):
-    db, client = connect_to_mongodb()
-    users_collection = db["users"]
-    user = users_collection.find_one({"username": username})
-    client.close()
-    return user is not None
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM users WHERE username=?''', (username,))
+    user = cursor.fetchone()
+    db.close()
+    if user is None:
+        return False
+    return True
 
 # ----- [ User Pokemon Interaction Functions ] ----- #
 
 def add_pokemon_to_user(user_id, pokemon_id):
-    db, client = connect_to_mongodb()
-    pokemons_have_collection = db["pokemons_have"]
-
-    # Check if the association already exists
-    if pokemons_have_collection.find_one({"user_id": user_id, "pokemon_id": pokemon_id}):
-        client.close()
-        return False
-
-    association_data = {
-        "user_id": user_id,
-        "pokemon_id": pokemon_id,
-        "pokemon_level": 0,
-        "pokemon_exp": 0,
-        "added_at": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    }
-
-    pokemons_have_collection.insert_one(association_data)
-    client.close()
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    cursor.execute('''INSERT INTO pokemons_have(user_id, pokemon_id) VALUES(?, ?)''', (user_id, pokemon_id))
+    db.commit()
+    db.close()
     return True
 
 def remove_pokemon_from_user(user_id, pokemon_id):
-    db, client = connect_to_mongodb()
-    pokemons_have_collection = db["pokemons_have"]
-
-    # Check if the association exists before deleting
-    if not pokemons_have_collection.find_one({"user_id": user_id, "pokemon_id": pokemon_id}):
-        client.close()
-        return False
-
-    pokemons_have_collection.delete_one({"user_id": user_id, "pokemon_id": pokemon_id})
-    client.close()
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    cursor.execute('''DELETE FROM pokemons_have WHERE user_id=? AND pokemon_id=?''', (user_id, pokemon_id))
+    db.commit()
+    db.close()
     return True
 
 def add_pokemon_to_user_favourites(user_id, pokemon_id):
-    db, client = connect_to_mongodb()
-    user_favourites_collection = db["user_favourite_pokemons"]
-
-    # Check if the association already exists
-    if user_favourites_collection.find_one({"user_id": user_id, "pokemon_id": pokemon_id}):
-        client.close()
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    if get_user_pokemon(user_id, pokemon_id) is None:
         return False
-
-    association_data = {
-        "user_id": user_id,
-        "pokemon_id": pokemon_id,
-        "favourite_from": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    }
-
-    user_favourites_collection.insert_one(association_data)
-    client.close()
+    cursor.execute('''INSERT INTO user_favourite_pokemons(user_id, pokemon_id) VALUES(?, ?)''', (user_id, pokemon_id))
+    db.commit()
+    db.close()
     return True
 
 def remove_pokemon_from_user_favourites(user_id, pokemon_id):
-    db, client = connect_to_mongodb()
-    user_favourites_collection = db["user_favourite_pokemons"]
-
-    # Check if the association exists before deleting
-    if not user_favourites_collection.find_one({"user_id": user_id, "pokemon_id": pokemon_id}):
-        client.close()
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    if get_user_pokemon(user_id, pokemon_id) is None:
         return False
-
-    user_favourites_collection.delete_one({"user_id": user_id, "pokemon_id": pokemon_id})
-    client.close()
+    cursor.execute('''DELETE FROM user_favourite_pokemons WHERE user_id=? AND pokemon_id=?''', (user_id, pokemon_id))
+    db.commit()
+    db.close()
     return True
 
 def upgrade_pokemon_for_user(user_id, pokemon_id, level):
-    db, client = connect_to_mongodb()
-    pokemons_have_collection = db["pokemons_have"]
-
-    # Check if the association exists before updating
-    association = pokemons_have_collection.find_one({"user_id": user_id, "pokemon_id": pokemon_id})
-    if not association:
-        client.close()
-        return False
-
-    pokemons_have_collection.update_one(
-        {"user_id": user_id, "pokemon_id": pokemon_id},
-        {"$set": {"level": level}}
-    )
-    client.close()
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    cursor.execute('''UPDATE pokemons_have SET level=? WHERE user_id=? AND pokemon_id=?''', (level, user_id, pokemon_id))
+    db.commit()
+    db.close()
     return True
 
 def get_user_pokemon(user_id, pokemon_id):
-    db, client = connect_to_mongodb()
-    pokemons_have_collection = db["pokemons_have"]
-
-    pokemon = pokemons_have_collection.find_one({"user_id": user_id, "pokemon_id": pokemon_id})
-    client.close()
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    cursor.execute('''SELECT * FROM pokemons_have WHERE user_id=? AND pokemon_id=?''', (user_id, pokemon_id))
+    pokemon = cursor.fetchone()
+    db.close()
     return pokemon
 
 def get_user_pokemons(user_id):
-    db, client = connect_to_mongodb()
-    pokemons_have_collection = db["pokemons_have"]
-
-    # Use aggregation to join the collections and retrieve the user's Pokémon information
-    pipeline = [
-        {"$match": {"user_id": user_id}},
-        {
-            "$lookup": {
-                "from": "pokemons",
-                "localField": "pokemon_id",
-                "foreignField": "_id",
-                "as": "pokemon_info"
-            }
-        },
-        {"$unwind": "$pokemon_info"},
-        {"$project": {"_id": 0}}
-    ]
-
-    user_pokemons = list(pokemons_have_collection.aggregate(pipeline))
-    client.close()
-    return user_pokemons
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    cursor.execute('''SELECT pokemons_have.*, pokemons.* FROM pokemons_have INNER JOIN pokemons ON pokemons_have.pokemon_id=pokemons.id WHERE pokemons_have.user_id=?''', (user_id,))
+    pokemons = cursor.fetchall()
+    db.close()
+    return pokemons
 
 # ----- [ Chat Functions ] ----- #
 
 def get_chat_messages():
-    db, client = connect_to_mongodb()
-    chat_messages_collection = db["chat_messages"]
-
-    # Use aggregation to join the collections and retrieve chat messages with usernames
-    pipeline = [
-        {"$lookup": {"from": "users", "localField": "user_id", "foreignField": "_id", "as": "user_info"}},
-        {"$unwind": "$user_info"},
-        {"$project": {"_id": 0, "id": "$chat_messages.id", "user_id": 1, "message": 1, "is_command": 1, "message_time": "$chat_messages.message_time", "username": "$user_info.username"}},
-        {"$sort": {"id": 1}},
-        {"$limit": 50}
-    ]
-
-    messages = list(chat_messages_collection.aggregate(pipeline))
-    client.close()
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    cursor.execute('''
+        SELECT chat_messages.*, users.username FROM chat_messages
+        INNER JOIN users ON chat_messages.user_id=users.id
+        ORDER BY chat_messages.id ASC
+        LIMIT 50
+    ''')
+    messages = cursor.fetchall()
+    db.close()
     return messages
 
 def add_chat_message(user_id, message):
-    db, client = connect_to_mongodb()
-    chat_messages_collection = db["chat_messages"]
-
-    is_cmd = message.startswith('/')
-
-    message_data = {
-        "user_id": user_id,
-        "message": message,
-        "is_command": is_cmd
-    }
-
-    chat_messages_collection.insert_one(message_data)
-    client.close()
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    is_cmd = False
+    if message.startswith('/'):
+        is_cmd = True
+    cursor.execute('''INSERT INTO chat_messages(user_id, message, is_command) VALUES(?, ?, ?)''', (user_id, message, is_cmd))
+    db.commit()
+    db.close()
     return True
 
 def chat_handle_commands(message, user_id):
@@ -532,17 +509,12 @@ def password_hashing(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
 def verify_passwords(password, username):
-    db, client = connect_to_mongodb()
-    users_collection = db["users"]
-
-    # Get user document by username
-    user_document = users_collection.find_one({"username": username})
-
-    if not user_document:
-        client.close()
-        return False
-
-    # Extract hashed password from the user document
-    password_db_hashed = user_document.get("password", "")
-    client.close()
-    return password_hashing(password) == password_db_hashed
+    user_id = get_user_by_username(username)[0]
+    db = sqlite3.connect(__file__ + f'/../maindb_{version_db}.db')
+    cursor = db.cursor()
+    cursor.execute('''SELECT password FROM users WHERE id=?''', (user_id,))
+    password_db = cursor.fetchone()[0]
+    db.close()
+    if password_hashing(password) == password_db:
+        return True
+    return False
