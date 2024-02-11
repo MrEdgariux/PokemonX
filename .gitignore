@@ -1,1 +1,2 @@
-/maindb*.db
+maindb_*.db
+.env
